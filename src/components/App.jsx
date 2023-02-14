@@ -24,7 +24,7 @@ export class App extends Component {
         loading: false,
       }));
 
-      setTimeout(() => this.scroll(), 1);
+      this.scroll();
     }
 
     if (page >= totalPages && images !== prevState.images) {
@@ -73,9 +73,8 @@ export class App extends Component {
   };
 
   scroll = () => {
-    const { clientHeight } = document.documentElement;
-    window.scrollBy({
-      top: clientHeight - 180,
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
       behavior: 'smooth',
     });
   };
