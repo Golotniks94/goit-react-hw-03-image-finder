@@ -25,9 +25,7 @@ export class App extends Component {
       }));
 
       this.scroll();
-    }
-
-    if (page >= totalPages && images !== prevState.images) {
+    } else if (page >= totalPages && images !== prevState.images) {
       Notify.warning(
         "We're sorry, but you've reached the end of search results."
       );
