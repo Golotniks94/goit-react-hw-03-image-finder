@@ -24,8 +24,12 @@ export class App extends Component {
         loading: false,
       }));
 
-      this.scroll();
-    } else if (page >= totalPages && images !== prevState.images) {
+      setTimeout(() => {
+        this.scroll();
+      }, 1000);
+    }
+
+    if (page >= totalPages && images !== prevState.images) {
       Notify.warning(
         "We're sorry, but you've reached the end of search results."
       );
@@ -51,7 +55,7 @@ export class App extends Component {
       Notify.failure(
         'Sorry, there are no images matching your search query. Please try again.'
       );
-      return;
+      return this.setState({ images: [this.scroll] });
     }
 
     const totalPages = Math.floor(res.totalHits / 12);
@@ -71,8 +75,9 @@ export class App extends Component {
   };
 
   scroll = () => {
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
+    const { clientHeight } = document.documentElement;
+    window.scrollBy({
+      top: clientHeight - 180,
       behavior: 'smooth',
     });
   };
