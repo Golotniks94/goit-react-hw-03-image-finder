@@ -1,66 +1,41 @@
+import { Component } from 'react';
 import { Button, ImageGallery, Loader, Searchbar } from 'components/index';
 import { getImages } from 'services/ApiService';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
-import { useState, useEffect, useRef } from 'react';
 
-export const App = () => {
-  const [images, setImages] = useState([]);
-  const [query, setQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(null);
-  const [loading, setlsLoading] = useState(false);
-  const [error, setError] = useState(false);
-  const prevPage = useRef(1);
-  const prevQuery = useRef('');
+export class App extends Component {
+  state = {
+    images: [],
+    query: null,
+    page: 1,
+    totalPages: null,
+    loading: false,
+  };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setlsLoading(true);
+  async componentDidUpdate(prevProps, prevState) {
+    const { query, page, totalPages } = this.state;
+
+    if (prevState.page !== page && page !== 1) {
+      this.setState({ loading: true });
       const res = await getImages(query, page);
-      setlsLoading(false);
 
-      if (res.hits.length === 0) {
-        Notify.failure(
-          'Sorry, there are no images matching your search query. Please try again.'
-        );
-        setError(true);
-        setPage(prevPage.current);
-        setQuery(prevQuery.current);
-        return;
-      }
-
-      if (page === 1) {
-        const totalPages = Math.floor(res.totalHits / 12);
-        setTotalPages(totalPages);
-        setImages([]);
-      }
-
-      prevPage.current = page;
-      prevQuery.current = query;
-
-      setImages(images => [...images, ...res.hits]);
-
-      if (page !== 1 && !error) {
-        scroll('bottom');
-      } else {
-        scroll('top');
-      }
-    };
-
-    if (query && !error) {
-      fetchData();
+      this.setState(
+        ({ images }) => ({
+          images: [...images, ...res.hits],
+          loading: false,
+        }),
+        () => this.scroll()
+      );
     }
-  }, [page, query, error]);
 
-  useEffect(() => {
-    if (totalPages && page >= totalPages) {
+    if (page >= totalPages && prevState.images !== this.state.images) {
       Notify.warning(
         "We're sorry, but you've reached the end of search results."
       );
     }
-  }, [totalPages, page]);
+  }
 
-  const onSubmit = async evt => {
+  onSubmit = async evt => {
     evt.preventDefault();
     const input = evt.target.elements.search;
     const value = input.value.trim();
@@ -71,41 +46,59 @@ export const App = () => {
       return;
     }
 
-    setQuery(value);
-    setPage(page);
-    setError(false);
-  };
+    this.setState({ loading: true });
+    const res = await getImages(value, page);
+    this.setState({ loading: false });
 
-  const loadMore = () => {
-    setPage(prevPage => prevPage + 1);
-    setError(false);
-  };
+    if (res.hits.length === 0) {
+      Notify.failure(
+        'Sorry, there are no images matching your search query. Please try again.'
+      );
+      return;
+    }
 
-  const scroll = direction => {
-    const { clientHeight, scrollHeight } = document.documentElement;
+    const totalPages = Math.floor(res.totalHits / 12);
 
-    setTimeout(
-      () =>
-        window.scrollBy({
-          top: direction === 'top' ? -scrollHeight : clientHeight - 180,
-          behavior: 'smooth',
-        }),
-      1
+    this.setState(
+      {
+        images: res.hits,
+        query: value,
+        page,
+        totalPages,
+      },
+      () => this.scroll()
     );
   };
 
-  const isNotEmpty = images.length !== 0;
-  const isNotEndList = page < totalPages;
+  loadMore = () => {
+    this.setState(prevState => ({
+      page: prevState.page + 1,
+    }));
+  };
 
-  return (
-    <>
-      <Searchbar onSubmit={onSubmit} />
-      {isNotEmpty && <ImageGallery images={images} />}
-      {loading ? (
-        <Loader />
-      ) : (
-        isNotEmpty && isNotEndList && <Button onClick={loadMore} />
-      )}
-    </>
-  );
-};
+  scroll = () => {
+    const { clientHeight } = document.documentElement;
+    window.scrollBy({
+      top: clientHeight - 180,
+      behavior: 'smooth',
+    });
+  };
+
+  render() {
+    const { images, loading, totalPages, page } = this.state;
+    const isNotEmpty = images.length !== 0;
+    const isNotEndList = page < totalPages;
+
+    return (
+      <>
+        <Searchbar onSubmit={this.onSubmit} />
+        {isNotEmpty && <ImageGallery images={images} />}
+        {loading ? (
+          <Loader />
+        ) : (
+          isNotEmpty && isNotEndList && <Button onClick={this.loadMore} />
+        )}
+      </>
+    );
+  }
+}
